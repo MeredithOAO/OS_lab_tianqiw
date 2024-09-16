@@ -58,7 +58,7 @@ int main(void)
         // Just prints cmd
        execute_cmd(&cmd);
 
-        print_cmd(&cmd);
+        // print_cmd(&cmd);
 
 
       }
@@ -89,9 +89,34 @@ static execute_cmd(Command *cmd_get)
         perror("fork");
         exit(EXIT_FAILURE);
     } else if (pid == 0){
-        if ((*pl[0]) == 'l');{
-           call_ls();
-        }
+        
+
+        if(!strcmp(*pl, "ls"))
+        {call_ls();}
+        if(!strcmp(*pl, "who"))
+        {call_who();}
+        if(!strcmp(*pl, "date"))
+        {call_date();}
+
+        // switch (*pl[0])
+        // {
+        // case 'l':
+        //     call_ls();
+        //     break;
+        // case 'd':
+        //     call_date();
+        //     break;
+        // case 'w':
+        //     call_who();
+        //     break;
+
+        
+        // default:
+        //     printf("Unknown command\n");
+        //     break;
+        // }
+
+        
     } else {
         // Parent process: wait for the child to complete
         int status;
