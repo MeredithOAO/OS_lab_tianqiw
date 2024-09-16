@@ -23,14 +23,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 // The <unistd.h> header is your gateway to the OS's process management facilities.
 #include <unistd.h>
+
+#include "call_cmd.h"
 
 #include "parse.h"
 
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
+static execute_cmd(Command *);
 void stripwhite(char *);
 
 int main(void)
@@ -52,7 +56,11 @@ int main(void)
       if (parse(line, &cmd) == 1)
       {
         // Just prints cmd
+       execute_cmd(&cmd);
+
         print_cmd(&cmd);
+
+
       }
       else
       {
@@ -66,6 +74,39 @@ int main(void)
 
   return 0;
 }
+
+
+static execute_cmd(Command *cmd_get)
+
+{
+    int sleep_time = 0;
+    Pgm *pgm = cmd_get->pgm;
+    char **pl = pgm->pgmlist;
+    // Fork a new process
+    pid_t pid = fork();
+    if (pid < 0) {
+        // Fork failed
+        perror("fork");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0){
+        if ((*pl[0]) == 'l');{
+           call_ls();
+        }
+    } else {
+        // Parent process: wait for the child to complete
+        int status;
+        if (!cmd_get->background) {
+            // Only wait if the command is not set to run in the background
+            waitpid(pid, &status, 0);
+        }
+    }
+        print_cmd(cmd_get);
+
+
+
+}
+
+
 
 /*
  * Print a Command structure as returned by parse on stdout.
