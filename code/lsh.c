@@ -108,7 +108,8 @@ static execute_cmd(Command *cmd_get)
         //     break;
         // case 'w':
         //     call_who();
-        //     break;
+        //     break;date
+        
 
         
         // default:
