@@ -34,7 +34,7 @@
 
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
-static execute_cmd(Command *);
+static int execute_cmd(Command *);
 void stripwhite(char *);
 
 int main(void)
@@ -76,13 +76,49 @@ int main(void)
 }
 
 
-static execute_cmd(Command *cmd_get)
+static int execute_cmd(Command *cmd_get)
 
 {
     int sleep_time = 0;
     Pgm *pgm = cmd_get->pgm;
     char **pl = pgm->pgmlist;
     // Fork a new process
+
+    char cmd_part[10];
+    char arg_part[10];
+    int i = 0;
+    int arg_index = 0;
+
+    // while(*pl[0] != ' ' && *pl[i] != '\0') 
+    // {
+    // *cmd_part[i] = *pl[i];
+    // i++;
+    // }
+
+    while (pl[0][i] != ' ' && pl[0][i] != '\0') {
+        cmd_part[i] = pl[0][i];
+        i++;
+    }
+
+    cmd_part[i] = '\0';
+
+    if (pl[0][i]== ' '){
+      for (; ; )
+      {
+        i++;
+        if (pl[0][i] == '\0'){
+          break;
+        }else{
+        arg_part[arg_index] = pl[0][i];
+        arg_index++;}
+
+      }
+    arg_part[arg_index+1] = '\0';   
+
+    }
+
+
+
     pid_t pid = fork();
     if (pid < 0) {
         // Fork failed
@@ -91,31 +127,16 @@ static execute_cmd(Command *cmd_get)
     } else if (pid == 0){
         
 
-        if(!strcmp(*pl, "ls"))
+
+
+        if(!strcmp(cmd_part, "ls"))
         {call_ls();}
-        if(!strcmp(*pl, "who"))
+        if(!strcmp(cmd_part, "who"))
         {call_who();}
-        if(!strcmp(*pl, "date"))
+        if(!strcmp(cmd_part, "date"))
         {call_date();}
-
-        // switch (*pl[0])
-        // {
-        // case 'l':
-        //     call_ls();
-        //     break;
-        // case 'd':
-        //     call_date();
-        //     break;
-        // case 'w':
-        //     call_who();
-        //     break;date
-        
-
-        
-        // default:
-        //     printf("Unknown command\n");
-        //     break;
-        // }
+        if(!strcmp(cmd_part, "cd"))
+        {call_cd(arg_part);}
 
         
     } else {

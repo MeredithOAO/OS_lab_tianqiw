@@ -1,4 +1,4 @@
 void call_ls();
 void call_who();
 void call_date();
-void call_cd();
+void call_cd(char arg_part);

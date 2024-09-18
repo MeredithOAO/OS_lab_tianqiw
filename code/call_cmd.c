@@ -18,7 +18,10 @@
 void call_ls()
 
 {
-    execlp("ls", "ls", "-l", (char *)NULL);
+    char *pathget = "build";
+    //printf("%s\n",arg_part);
+    //execlp("ls", "ls", "-l", (char *)NULL);
+    execlp("ls", "ls", pathget, (char *)NULL);
     // int error = 0;
     // error = execlp("ls", "ls", "-l", (char *)NULL);
     // perror("Execute lp fails");
@@ -26,6 +29,16 @@ void call_ls()
     //     exit(EXIT_FAILURE);
     // }
     
+}
+
+
+void call_cd(char arg_part)
+
+{
+    printf("%s\n",arg_part);
+    //char *arg_get = *arg_part;
+    //execlp("cd", "cd", arg_get, (char *)NULL);
+    //chdir(arg_part);     
 }
 
 void call_who()
