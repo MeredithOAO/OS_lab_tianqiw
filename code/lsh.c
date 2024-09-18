@@ -86,8 +86,9 @@ static int execute_cmd(Command *cmd_get)
    
 
     char *cmd_part = pl[0];
+    char *arg_first = pl[1];
 
-    //char *arg_part = pl[1];
+    char *arg_part = pl[1];
     char *arg_get = pl;
     if (!strcmp(cmd_part, "exit")) {
             printf("Exit!.\n");
@@ -103,13 +104,20 @@ static int execute_cmd(Command *cmd_get)
         exit(1);
     } else if (pid == 0){
 
-        if(!strcmp(cmd_part, "ls"))
-        {        
-        execvp(cmd_part,arg_get);
+        if(!strcmp(cmd_part, "cd")){
+
+        chdir(arg_first);
+
+        }else{execvp(cmd_part,arg_get);}
+
+        
+        // if(!strcmp(cmd_part, "ls"))
+        // {        
+
         //call_ls(args[0]);
         //printf("%s\n",*args[0]);
         //call_ls(arg_part);
-        }
+        // }
         // if(!strcmp(cmd_part, "who"))
         // {call_who();}
         // if(!strcmp(cmd_part, "date"))
