@@ -15,13 +15,13 @@
 
 
 
-void call_ls()
+void call_ls(char *arg_part)
 
 {
-    char *pathget = "build";
+    //char *pathget = arg_part;
     //printf("%s\n",arg_part);
-    //execlp("ls", "ls", "-l", (char *)NULL);
-    execlp("ls", "ls", pathget, (char *)NULL);
+    execlp("ls", "ls", arg_part, (char *)NULL);
+    //execlp("ls", "ls", arg_part, (char *)NULL);
     // int error = 0;
     // error = execlp("ls", "ls", "-l", (char *)NULL);
     // perror("Execute lp fails");
@@ -32,13 +32,14 @@ void call_ls()
 }
 
 
-void call_cd(char arg_part)
+void call_cd(char *arg_part)
 
 {
-    printf("%s\n",arg_part);
+    //if(arg_part == 1)
+    //perror("Execute lp fails");
     //char *arg_get = *arg_part;
     //execlp("cd", "cd", arg_get, (char *)NULL);
-    //chdir(arg_part);     
+    chdir(arg_part);     
 }
 
 void call_who()

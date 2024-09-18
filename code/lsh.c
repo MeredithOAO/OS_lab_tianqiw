@@ -82,61 +82,42 @@ static int execute_cmd(Command *cmd_get)
     int sleep_time = 0;
     Pgm *pgm = cmd_get->pgm;
     char **pl = pgm->pgmlist;
+    
+   
+
+    char *cmd_part = pl[0];
+
+    //char *arg_part = pl[1];
+    char *arg_get = pl;
+    if (!strcmp(cmd_part, "exit")) {
+            printf("Exit!.\n");
+            exit(1);  // exit
+        }
+
+
     // Fork a new process
-
-    char cmd_part[10];
-    char arg_part[10];
-    int i = 0;
-    int arg_index = 0;
-
-    // while(*pl[0] != ' ' && *pl[i] != '\0') 
-    // {
-    // *cmd_part[i] = *pl[i];
-    // i++;
-    // }
-
-    while (pl[0][i] != ' ' && pl[0][i] != '\0') {
-        cmd_part[i] = pl[0][i];
-        i++;
-    }
-
-    cmd_part[i] = '\0';
-
-    if (pl[0][i]== ' '){
-      for (; ; )
-      {
-        i++;
-        if (pl[0][i] == '\0'){
-          break;
-        }else{
-        arg_part[arg_index] = pl[0][i];
-        arg_index++;}
-
-      }
-    arg_part[arg_index+1] = '\0';   
-
-    }
-
-
-
     pid_t pid = fork();
     if (pid < 0) {
         // Fork failed
-        perror("fork");
-        exit(EXIT_FAILURE);
+        perror("fork failed");
+        exit(1);
     } else if (pid == 0){
-        
-
-
 
         if(!strcmp(cmd_part, "ls"))
-        {call_ls();}
-        if(!strcmp(cmd_part, "who"))
-        {call_who();}
-        if(!strcmp(cmd_part, "date"))
-        {call_date();}
-        if(!strcmp(cmd_part, "cd"))
-        {call_cd(arg_part);}
+        {        
+        execvp(cmd_part,arg_get);
+        //call_ls(args[0]);
+        //printf("%s\n",*args[0]);
+        //call_ls(arg_part);
+        }
+        // if(!strcmp(cmd_part, "who"))
+        // {call_who();}
+        // if(!strcmp(cmd_part, "date"))
+        // {call_date();}
+        // if(!strcmp(cmd_part, "cd"))
+        // {
+        // call_cd(arg_part);
+        // }
 
         
     } else {
@@ -226,3 +207,54 @@ void stripwhite(char *string)
 
   string[++i] = '\0';
 }
+
+
+// char cmd_part[10];
+    // char arg_part[10];
+    // int i = 0;
+    // int arg_index = 0;
+
+    // // while(*pl[0] != ' ' && *pl[i] != '\0') 
+    // // {
+    // // *cmd_part[i] = *pl[i];
+    // // i++;
+    // // }
+
+    // while (pl[0][i] != ' ' && pl[0][i] != '\0') {
+    //     cmd_part[i] = pl[0][i];
+    //     i++;
+    // }
+
+    // cmd_part[i] = '\0';
+
+    // if (pl[0][i]== ' '){
+      
+      
+    //   for (; ; )
+    //   {
+    //     i++;
+    //     if (pl[0][i] == '\0'){
+    //       break;
+    //     }else{
+    //     arg_part[arg_index] = pl[0][i];
+    //     arg_index++;}
+
+    //   }
+    // arg_part[arg_index+1] = '\0';   
+
+    // }
+
+
+        // const char *split_flag = " ";
+     
+    // char *split_cmds[10]; 
+    // int count = 0;
+
+    // char *split_cmd = strtok(*pl, split_flag);
+    // while (split_cmd != NULL) {
+    //     split_cmds[count++] = split_cmd;
+    //     split_cmd = strtok(NULL, split_flag);
+    // }
+
+    // char *cmd_part = split_cmds[0];
+    // //char *arg_part = split_cmds[2];
