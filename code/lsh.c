@@ -39,7 +39,6 @@ static void print_pgm(Pgm *p);
 static int handle_cmd(Command *cmd_get);
 void stripwhite(char *);
 void run_cmd(Pgm *pgm_now);
-
 void Redirections (Command *cmd_now);
 
 
@@ -125,9 +124,8 @@ static int handle_cmd(Command *cmd_get)
           pgm_now = pgm_now->next;
     }
 
-    int fds[pipe_counts+1][2]; //fd for read and write for all future processes, starting from the first process !!!!!!
-    memset( fds, 0, (pipe_counts+1)*2*sizeof(int) );
-
+    int file_des[pipe_counts+1][2]; //fd for read and write for all future processes, starting from the first process !!!!!!
+    memset( file_des, 0, (pipe_counts+1)*2*sizeof(int) );
 
     if (pipe_counts == 0){
     // Fork a new process
@@ -156,8 +154,10 @@ static int handle_cmd(Command *cmd_get)
     }
     else{  //if pipes != 0
 
-        fds[0][0] = STDIN_FILENO; //first one should read from standard input
-        fds[pipe_counts][1] = STDOUT_FILENO; //Last one should write to standard output
+
+        Pgm *pgm_now_dup = cmd_get->pgm;
+        file_des[0][0] = STDIN_FILENO; //first one should read from standard input
+        file_des[pipe_counts][1] = STDOUT_FILENO; //Last one should write to standard output
 
         for (int i = 0; i<pipe_counts; i++) { //Create all the necessary pipes
             int fd[2];
@@ -165,11 +165,11 @@ static int handle_cmd(Command *cmd_get)
                 fprintf(stderr, "Pipe failed");
                 return -1;
             }
-            fds[i][1] = fd[1]; //write to this pipe
-            fds[i+1][0] = fd[0]; //read from this pipe
+            file_des[i][1] = fd[1]; //write to this pipe
+            file_des[i+1][0] = fd[0]; //read from this pipe
         }
 
-        for (int i = 0; i <= pipe_counts; i++) { //Let main process fork a child for each command
+        for (int pipe_index = 0; pipe_index <= pipe_counts; pipe_index++) { //Let main process fork a child for each command
             int pid = fork();
             if (pid == -1) {
                 perror("Fork failed");
@@ -183,35 +183,33 @@ static int handle_cmd(Command *cmd_get)
                     setpgid(0,0); //Change
                 } 
                 
-                Pgm *pgm_now_dup = cmd_get->pgm;
-                for (int j = pipe_counts; (j-i)>0; j-- ) { //Make current_pgm the the command to be executed
+                
+                for (int pipe_counts_dup = pipe_counts; (pipe_counts_dup-pipe_index)>0; pipe_counts_dup-- ) { //Make current_pgm the the command to be executed
                     pgm_now_dup = pgm_now_dup->next;
                 }
 
                 Redirections(cmd_get);
 
-                if (fds[i][1] != STDOUT_FILENO ) {
-                    close(STDOUT_FILENO);  //closing stdout
-                    dup2(fds[i][1], STDOUT_FILENO); //replacing stdout with pipe write
-                    close(fds[i][1]);
+                if (file_des[pipe_index][1] != STDOUT_FILENO ) {
+                    dup2(file_des[pipe_index][1], STDOUT_FILENO); //replacing stdout with pipe write
+                    close(file_des[pipe_index][1]);
                 }
-                if (fds[i][0] != STDIN_FILENO) {
-                    close(STDIN_FILENO);  //closing stdin
-                    dup2(fds[i][0], STDIN_FILENO); //replacing stdin with pipe read
-                    close(fds[i][0]);
+                if (file_des[pipe_index][0] != STDIN_FILENO) {
+                    dup2(file_des[pipe_index][0], STDIN_FILENO); //replacing stdin with pipe read
+                    close(file_des[pipe_index][0]);
                 }
 
-                //close pipes not used
-                for (int k = 0; k<i; k++) { //for lower
-                    if (fds[k][0] != STDIN_FILENO) {
-                        close(fds[k][0]);
+                // //close pipes not used
+                for (int k = 0; k<pipe_index; k++) { //for lower
+                    if (file_des[k][0] != STDIN_FILENO) {
+                        close(file_des[k][0]);
                     }
-                    close(fds[k][1]);
+                    close(file_des[k][1]);
                 }
-                for (int l = i+1; l<=pipe_counts; l++) { //for higher
-                    close(fds[l][0]);
-                    if (fds[l][1] != STDOUT_FILENO) {
-                        close(fds[l][1]);
+                for (int l = pipe_index+1; l<=pipe_counts; l++) { //for higher
+                    close(file_des[l][0]);
+                    if (file_des[l][1] != STDOUT_FILENO) {
+                        close(file_des[l][1]);
                     }
                 }
                 run_cmd(pgm_now_dup);
@@ -224,11 +222,11 @@ static int handle_cmd(Command *cmd_get)
     if (pipe_counts>0) {
 
         for (int m = 1; m<pipe_counts; m++) {
-            close(fds[m][0]);
-            close(fds[m][1]);
+            close(file_des[m][0]);
+            close(file_des[m][1]);
         }
-        close(fds[0][1]); //close write of first pipe
-        close(fds[pipe_counts][0]); //close read from last pipe
+        close(file_des[0][1]); //close write of first pipe
+        close(file_des[pipe_counts][0]); //close read from last pipe
     }
 
     //Wait for all children if in foreground
@@ -241,7 +239,6 @@ static int handle_cmd(Command *cmd_get)
 
 return 0;
 }
-
 
 
 /*
