@@ -38,28 +38,37 @@ static int handle_cmd(Command *cmd_get);
 void stripwhite(char *);
 void run_cmd(Pgm *pgm_now);
 void redirections(Command *cmd_now);
+static void sigint_handler_parent(int sig);
+static void sigint_handler_fg(int sig);
+static void exit_handler();
+
 
 int finish_flag = 0;
-pid_t mainpid = -1;
+pid_t foreground_pid = -1;
 
 int main(void)
 {
   Command cmd;
   char *line;
-  signal(SIGINT, SIG_IGN);
-  mainpid = getpid();
+  //signal(SIGINT, SIG_IGN);
+  signal(SIGINT, sigint_handler_parent);
+  signal(SIGCHLD, SIG_IGN);
+  foreground_pid = getpid();
 
-  while (!finish_flag)
+  while (1)
   {
 
     line = readline("> ");
+    if (line == NULL)
+      {exit_handler();}
 
-    if (!line)
-    {
-      finish_flag = 1;
-    }
-    else
-    {
+
+    // if (!line)
+    // {
+    //     finish_flag = 1;
+    // }
+    // else
+    // {
       stripwhite(line);
 
       if (*line)
@@ -67,9 +76,26 @@ int main(void)
         add_history(line);
         parse(line, &cmd);
 
-        handle_cmd(&cmd);
+        if (cmd.background)
+        {
+          int pid = fork();
+          if (pid == 0)
+          {
+            /*
+            handle the SIGINT(a signal number which is Ctrl-C)
+            SIG_IGN will ignore the signal of Ctrl-C
+            */
+            signal(SIGINT, SIG_IGN);
+            handle_cmd(&cmd);
+            exit(0);
+          }
+        }else{handle_cmd(&cmd);}
+
+
+
+        
       }
-    }
+    // }
 
     if (line)
     {
@@ -79,6 +105,31 @@ int main(void)
 
   return 0;
 }
+
+static void sigint_handler_parent(int sig)
+{
+  (void)sig; // Avoid warning
+  
+  if (foreground_pid != -1)
+  {
+    kill(foreground_pid, SIGINT);
+    foreground_pid = -1; // undefined behaviour?
+  }
+}
+
+static void exit_handler()
+{
+  signal(SIGQUIT, SIG_IGN);
+  kill(0, SIGQUIT);
+  exit(0);
+}
+
+static void sigint_handler_fg(int sig)
+{
+  (void)sig; // Avoid warning
+  exit(0);
+}
+
 
 static int handle_cmd(Command *cmd_get)
 
@@ -110,10 +161,13 @@ static int handle_cmd(Command *cmd_get)
   }
 
   if (cmd_get->background == 1)
-  { // if in background !!!!!
+  { 
+    // if in background !!!!!
+
   }
   else
   {
+    
   }
 
   while (pgm_now->next != NULL)
@@ -123,9 +177,9 @@ static int handle_cmd(Command *cmd_get)
   }
 
   int file_des[pipe_counts][2];
-
+  // int pid = fork();
   if (pipe_counts == 0)
-  {
+  {   
     // Fork a new process
     int pid = fork();
 
@@ -138,25 +192,40 @@ static int handle_cmd(Command *cmd_get)
 
     if (pid == 0)
     {
-      signal(SIGINT, SIG_DFL); // recovery signal
+          if (cmd_get->background != 1)
+    {
+      signal(SIGINT, sigint_handler_fg);
+    }
+    //   signal(SIGINT, SIG_DFL); // recovery signal
       redirections(cmd_get);
       run_cmd(pgm_now);
     }
     else
     {
-      mainpid = pid;
-      if (cmd_get->background != 1)
-      {
-        wait(NULL);
-        mainpid = -1;
-      }
+      // foreground_pid = pid;
+      // if (cmd_get->background != 1)
+      // {
+      //   wait(NULL);
+      //   foreground_pid = -1;
+      // }
+
+    if (cmd_get->background) {
+    foreground_pid = foreground_pid;
+        } else {
+    foreground_pid = pid;
+}
+    int status;
+    waitpid(pid, &status, 0);
+
+
+
     }
     // print_cmd(cmd_get);
-    // return 0;
+     return 0;
   }
   else
   { // if pipes != 0
-
+    // int pid = fork();
     Pgm *pgm_now_dup = cmd_get->pgm;
     int pipe_index = 0;
     int fd_pipe_creat[pipe_counts][2];
@@ -228,7 +297,8 @@ static int handle_cmd(Command *cmd_get)
         run_cmd(pgm_now_dup);
       }
       else
-      { // if parent
+      {   
+
       }
     }
   }
@@ -251,6 +321,14 @@ static int handle_cmd(Command *cmd_get)
       wait(&status);
     }
   }
+
+//       if (cmd_get->background) {
+//     foreground_pid = foreground_pid;
+//         } else {
+//     foreground_pid = pid;
+// }
+//     int status;
+//     waitpid(pid, &status, 0);
 
   return 0;
 }
