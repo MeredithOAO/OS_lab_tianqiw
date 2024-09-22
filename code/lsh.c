@@ -30,8 +30,6 @@
 // The <unistd.h> header is your gateway to the OS's process management facilities.
 #include <unistd.h>
 
-
-
 #include "parse.h"
 
 static void print_cmd(Command *cmd);
@@ -39,13 +37,10 @@ static void print_pgm(Pgm *p);
 static int handle_cmd(Command *cmd_get);
 void stripwhite(char *);
 void run_cmd(Pgm *pgm_now);
-void redirections (Command *cmd_now);
-
-
+void redirections(Command *cmd_now);
 
 int finish_flag = 0;
 pid_t mainpid = -1;
-
 
 int main(void)
 {
@@ -54,11 +49,11 @@ int main(void)
   signal(SIGINT, SIG_IGN);
   mainpid = getpid();
 
-  while (!finish_flag) 
-  {    
+  while (!finish_flag)
+  {
 
     line = readline("> ");
-    
+
     if (!line)
     {
       finish_flag = 1;
@@ -66,17 +61,17 @@ int main(void)
     else
     {
       stripwhite(line);
-          
-      if(*line) 
-        {
-          add_history(line);
-          parse(line, &cmd);
-            
-          handle_cmd(&cmd);
-        }
+
+      if (*line)
+      {
+        add_history(line);
+        parse(line, &cmd);
+
+        handle_cmd(&cmd);
+      }
     }
-    
-    if(line) 
+
+    if (line)
     {
       free(line);
     }
@@ -88,157 +83,177 @@ int main(void)
 static int handle_cmd(Command *cmd_get)
 
 {
-    //int sleep_time = 0;
-    int chld_pid;
-    int pipe_counts = 0;
+  // int sleep_time = 0;
+  int chld_pid;
+  int pipe_counts = 0;
 
+  Pgm *pgm_now = cmd_get->pgm;
+  char **pgmlist = pgm_now->pgmlist;
 
-    Pgm *pgm_now = cmd_get->pgm;
-    char **pgmlist = pgm_now->pgmlist;
-    
-    char *cmd_part = pgmlist[0];
-    char *arg_first = pgmlist[1];//get path for cd
+  char *cmd_part = pgmlist[0];
+  char *arg_first = pgmlist[1]; // get path for cd
 
-    if (!strcmp(cmd_part, "exit")) {
-    exit(0); 
+  if (!strcmp(cmd_part, "exit"))
+  {
+    exit(0);
+  }
+
+  // handle cd
+  if (!strcmp(cmd_part, "cd"))
+  {
+
+    if (chdir(arg_first) < 0)
+    {
+      printf("failed to change directory to %s \n", arg_first);
     }
+    return 0;
+  }
 
-    //handle cd  
-    if (!strcmp(cmd_part, "cd")) {
-       
-        if (chdir(arg_first) < 0) {
-            printf("failed to change directory to %s \n", arg_first);
-        }
-        return 0;
-    }
+  if (cmd_get->background == 1)
+  { // if in background !!!!!
+  }
+  else
+  {
+  }
 
-    if (cmd_get->background == 1) { //if in background !!!!!
-    
-    } else {
+  while (pgm_now->next != NULL)
+  { //!!!!!!
+    pipe_counts++;
+    pgm_now = pgm_now->next;
+  }
 
-    }
+  int file_des[pipe_counts][2];
 
-
-    while (pgm_now->next != NULL){  //!!!!!!
-          pipe_counts++;
-          pgm_now = pgm_now->next;
-    }
-
-    int file_des[pipe_counts][2]; 
-    
-
-    if (pipe_counts == 0){
+  if (pipe_counts == 0)
+  {
     // Fork a new process
     int pid = fork();
 
-    if (pid < 0) {
-        // Fork failed
-        perror("fork failed");
-        exit(1);
-    } 
-    
-    if (pid == 0){
-        signal(SIGINT, SIG_DFL);//recovery signal
-        redirections (cmd_get);
-        run_cmd(pgm_now);
- 
-    } else {
-        mainpid = pid;
-        if (cmd_get->background != 1) {
-            wait(NULL);
-            mainpid = -1;
-        }
+    if (pid < 0)
+    {
+      // Fork failed
+      perror("fork failed");
+      exit(1);
     }
-        //print_cmd(cmd_get);
-        //return 0;
+
+    if (pid == 0)
+    {
+      signal(SIGINT, SIG_DFL); // recovery signal
+      redirections(cmd_get);
+      run_cmd(pgm_now);
     }
-    else{  //if pipes != 0
-
-
-        Pgm *pgm_now_dup = cmd_get->pgm;
-        int pipe_index = 0;
-        int fd_pipe_creat[pipe_counts][2];
-        file_des[0][0] = STDIN_FILENO;             // First command reads from standard input
-        file_des[pipe_counts][1] = STDOUT_FILENO;  // Last command writes to standard output
-
-        // Create pipes and assign fd
-        for (int i = 0; i < pipe_counts; i++) {
-        if (pipe(fd_pipe_creat[i]) == -1) {
-        perror("Pipe failed");
-        return -1;
-            }
-        file_des[i][1] = fd_pipe_creat[i][1]; // Write end for the current command
-        file_des[i+1][0] = fd_pipe_creat[i][0]; // Read end for the next command
-}
-
-
-        for (pipe_index; pipe_index <= pipe_counts; pipe_index++) { //Let main process fork a child for each command
-            
-            int pid = fork();
-            if (pid == -1) {
-                perror("Fork failed");
-                exit(1);
-            }
-            
-            if(pid == 0) {
-                signal(SIGINT, SIG_DFL); //enable ctrl_c
-
-                for (int i = pipe_counts; i > pipe_index; i-- ) {
-                    pgm_now_dup = pgm_now_dup->next;
-                }
-
-                redirections(cmd_get);
-
-                if (file_des[pipe_index][1] != STDOUT_FILENO ) {
-                  if (dup2(file_des[pipe_index][1], STDOUT_FILENO) == -1) {
-                      perror("dup2 stdout failed");
-                      exit(1);
-                      }
-                }
-                if (file_des[pipe_index][0] != STDIN_FILENO) {
-                  if (dup2(file_des[pipe_index][0], STDIN_FILENO) == -1) {
-                      perror("dup2 stdin failed");
-                      exit(1);
-                      }
-                }
-
-            for (int i = 0; i <= pipe_counts; i++) {
-            if (file_des[i][0] != STDIN_FILENO) {
-                close(file_des[i][0]);
-            }
-            if (file_des[i][1] != STDOUT_FILENO) {
-                close(file_des[i][1]);
-            }
-        }
-
-                run_cmd(pgm_now_dup);
-            } else { //if parent
-
-            }
-        }
-    }
-    //Close parents pipes
-    if (pipe_counts>0) {
-      for (int i = 0; i < pipe_counts; i++)
+    else
+    {
+      mainpid = pid;
+      if (cmd_get->background != 1)
       {
-        close(file_des[i][0]);
-        close(file_des[i][1]);
+        wait(NULL);
+        mainpid = -1;
       }
     }
+    // print_cmd(cmd_get);
+    // return 0;
+  }
+  else
+  { // if pipes != 0
 
-    //Wait for all children if in foreground
-    if (!(cmd_get->background)) { //If not in background
-    for (int i = 0; i <= pipe_counts; i++) {
-    int status;
-    wait(&status);
+    Pgm *pgm_now_dup = cmd_get->pgm;
+    int pipe_index = 0;
+    int fd_pipe_creat[pipe_counts][2];
+    file_des[0][0] = STDIN_FILENO;            // First command reads from standard input
+    file_des[pipe_counts][1] = STDOUT_FILENO; // Last command writes to standard output
+
+    // Create pipes and assign fd
+    for (int i = 0; i < pipe_counts; i++)
+    {
+      if (pipe(fd_pipe_creat[i]) == -1)
+      {
+        perror("Pipe failed");
+        return -1;
+      }
+      file_des[i][1] = fd_pipe_creat[i][1];     // Write end for the current command
+      file_des[i + 1][0] = fd_pipe_creat[i][0]; // Read end for the next command
     }
 
+    for (pipe_index; pipe_index <= pipe_counts; pipe_index++)
+    { // Let main process fork a child for each command
+
+      int pid = fork();
+      if (pid == -1)
+      {
+        perror("Fork failed");
+        exit(1);
+      }
+
+      if (pid == 0)
+      {
+        signal(SIGINT, SIG_DFL); // enable ctrl_c
+
+        for (int i = pipe_counts; i > pipe_index; i--)
+        {
+          pgm_now_dup = pgm_now_dup->next;
+        }
+
+        redirections(cmd_get);
+
+        if (file_des[pipe_index][1] != STDOUT_FILENO)
+        {
+          if (dup2(file_des[pipe_index][1], STDOUT_FILENO) == -1)
+          {
+            perror("dup2 stdout failed");
+            exit(1);
+          }
+        }
+        if (file_des[pipe_index][0] != STDIN_FILENO)
+        {
+          if (dup2(file_des[pipe_index][0], STDIN_FILENO) == -1)
+          {
+            perror("dup2 stdin failed");
+            exit(1);
+          }
+        }
+
+        for (int i = 0; i <= pipe_counts; i++)
+        {
+          if (file_des[i][0] != STDIN_FILENO)
+          {
+            close(file_des[i][0]);
+          }
+          if (file_des[i][1] != STDOUT_FILENO)
+          {
+            close(file_des[i][1]);
+          }
+        }
+
+        run_cmd(pgm_now_dup);
+      }
+      else
+      { // if parent
+      }
     }
+  }
+  // Close parents pipes
+  if (pipe_counts > 0)
+  {
+    for (int i = 0; i < pipe_counts; i++)
+    {
+      close(file_des[i][0]);
+      close(file_des[i][1]);
+    }
+  }
 
+  // Wait for all children if in foreground
+  if (!(cmd_get->background))
+  { // If not in background
+    for (int i = 0; i <= pipe_counts; i++)
+    {
+      int status;
+      wait(&status);
+    }
+  }
 
-return 0;
+  return 0;
 }
-
 
 /*
  * Print a Command structure as returned by parse on stdout.
@@ -284,7 +299,6 @@ static void print_pgm(Pgm *p)
   }
 }
 
-
 /* Strip whitespace from the start and end of a string.
  *
  * Helper function, no need to change.
@@ -314,45 +328,42 @@ void stripwhite(char *string)
 
 void run_cmd(Pgm *pgm_now)
 {
-    //int nmb_args = 0;
-    //int arg_counts = 0;
-    char **pgmlist = pgm_now->pgmlist;
-    char *arg_all = pgmlist;
+  char **pgmlist = pgm_now->pgmlist;
+  char *arg_all = pgmlist;
 
-    // while (pgmlist[arg_counts] != NULL) {
-    //     arg_counts++;
-    // }// get numbers of args
-
-    execvp(pgmlist[0], arg_all);
-        perror("execvp failed");
-        exit(1);
-
-
+  execvp(pgmlist[0], arg_all);
+  perror("execvp failed");
+  exit(1);
 }
 
-
-void redirections(Command *cmd_now) {
-    if (cmd_now->rstdout != NULL) {
-        int fd_out = creat(cmd_now->rstdout, 0644);// 0644 arg for normal permission settings
-        if (fd_out == -1) {
-            perror("can not open output file");
-            exit(1);
-        }
-        if (dup2(fd_out, STDOUT_FILENO) == -1) {
-            perror("stdout fail");
-            exit(1);
-        }
+void redirections(Command *cmd_now)
+{
+  if (cmd_now->rstdout != NULL)
+  {
+    int fd_out = creat(cmd_now->rstdout, 0644); // 0644 arg for normal permission settings
+    if (fd_out == -1)
+    {
+      perror("can not open output file");
+      exit(1);
     }
-    if (cmd_now->rstdin != NULL) {
-        int fd_in = open(cmd_now->rstdin, 0);// 0 arg for read only
-        if (fd_in == -1) {
-            perror("can not open input file");
-            exit(1);
-        }
-        if (dup2(fd_in, STDIN_FILENO) == -1) {
-            perror("stdin fail");
-            exit(1);
-        }
+    if (dup2(fd_out, STDOUT_FILENO) == -1)
+    {
+      perror("stdout fail");
+      exit(1);
     }
+  }
+  if (cmd_now->rstdin != NULL)
+  {
+    int fd_in = open(cmd_now->rstdin, 0); // 0 arg for read only
+    if (fd_in == -1)
+    {
+      perror("can not open input file");
+      exit(1);
+    }
+    if (dup2(fd_in, STDIN_FILENO) == -1)
+    {
+      perror("stdin fail");
+      exit(1);
+    }
+  }
 }
-
