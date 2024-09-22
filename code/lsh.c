@@ -39,13 +39,13 @@ static void print_pgm(Pgm *p);
 static int handle_cmd(Command *cmd_get);
 void stripwhite(char *);
 void run_cmd(Pgm *pgm_now);
-void handle_sigint(int sig);
+
 void Redirections (Command *cmd_now);
-void sigchldHandler(int sig);
+
 
 
 int finish_flag = 0;
-pid_t mainpid;
+pid_t mainpid = -1;
 
 
 int main(void)
@@ -54,16 +54,15 @@ int main(void)
   char *line;
   signal(SIGINT, SIG_IGN);
   mainpid = getpid();
-  signal(SIGCHLD,handle_sigint);
-  //signal(SIGCHLD, sigchldHandler);
+
   while (!finish_flag) 
   {    
-    signal(SIGCHLD, sigchldHandler);
+
     line = readline("> ");
     
     if (!line)
     {
-      finish_flag=1;
+      finish_flag = 1;
     }
     else
     {
@@ -87,37 +86,9 @@ int main(void)
   return 0;
 }
 
-void sigchldHandler(int sig) {
-    pid_t pid;
-    int status;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) { //Wait for any child without blocking
-        //printf("PID of terminated child %d\n", pid);
-    }
-    return;
-  
-}
-
-void handle_sigint(int sig){
-
-if (getppid() == mainpid)
-{
-    // exit(0);
-    kill(mainpid, SIGINT);
-}else{
-  printf("\nShell: No foreground process. Press Ctrl-D to exit.\n");
-}
-
-
-
-
-
-}
-
 static int handle_cmd(Command *cmd_get)
 
 {
-
-
     //int sleep_time = 0;
     int chld_pid;
     int pipe_counts = 0;
@@ -143,10 +114,9 @@ static int handle_cmd(Command *cmd_get)
     }
 
     if (cmd_get->background == 1) { //if in background !!!!!
-        signal(SIGCHLD, sigchldHandler);
+    
     } else {
-        //printf("Sighandler set to not in background\n");
-        //signal(SIGCHLD, SIG_DFL); //Set to default and make parent wait instead, change SIGINT 
+
     }
 
 
@@ -159,7 +129,7 @@ static int handle_cmd(Command *cmd_get)
     memset( fds, 0, (pipe_counts+1)*2*sizeof(int) );
 
 
-    if (pipe_counts==0){
+    if (pipe_counts == 0){
     // Fork a new process
     int pid = fork();
 
@@ -178,16 +148,14 @@ static int handle_cmd(Command *cmd_get)
         mainpid = pid;
         if (cmd_get->background != 1) {
             wait(NULL);
+            mainpid = -1;
         }
     }
         //print_cmd(cmd_get);
         //return 0;
     }
-    else{
-//
+    else{  //if pipes != 0
 
-//Create pipes and execute processes
-      
         fds[0][0] = STDIN_FILENO; //first one should read from standard input
         fds[pipe_counts][1] = STDOUT_FILENO; //Last one should write to standard output
 
@@ -215,9 +183,9 @@ static int handle_cmd(Command *cmd_get)
                     setpgid(0,0); //Change
                 } 
                 
-                Pgm *current_pgm = cmd_get->pgm;
+                Pgm *pgm_now_dup = cmd_get->pgm;
                 for (int j = pipe_counts; (j-i)>0; j-- ) { //Make current_pgm the the command to be executed
-                    current_pgm = current_pgm->next;
+                    pgm_now_dup = pgm_now_dup->next;
                 }
 
                 Redirections(cmd_get);
@@ -246,7 +214,7 @@ static int handle_cmd(Command *cmd_get)
                         close(fds[l][1]);
                     }
                 }
-                run_cmd(current_pgm);
+                run_cmd(pgm_now_dup);
             } else { //if parent
 
             }
@@ -268,10 +236,6 @@ static int handle_cmd(Command *cmd_get)
         for (int i = 0; i<= pipe_counts; i++) { //Wait for all children
             wait(NULL);
         }
-    
-
-
-
     }
 
 
