@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "history.h": "c",
-        "wait.h": "c"
+        "wait.h": "c",
+        "chrono": "c",
+        "algorithm": "c"
     }
 }
