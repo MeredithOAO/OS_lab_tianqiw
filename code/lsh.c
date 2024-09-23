@@ -59,7 +59,7 @@ int main(void)
   {
 
     line = readline("> ");
-    if (line == NULL)
+    if (line == NULL)  // add comment here
       {  
         signal(SIGQUIT, SIG_IGN);
         kill(0, SIGQUIT);
@@ -73,13 +73,13 @@ int main(void)
         add_history(line);
         parse(line, &cmd);
 
-        if (cmd.background)
+        if (cmd.background)// add comment here
         {
           int pid = fork();
           if (pid == 0)
           {
 
-            signal(SIGINT, SIG_IGN); //disable ctrl+c
+            signal(SIGINT, SIG_IGN); //disable ctrl+c to avoiding close the shell
             handle_cmd(&cmd);
             exit(0);
           }
@@ -99,20 +99,17 @@ int main(void)
   return 0;
 }
 
-static void sigint_handler_parent(int sig)
+static void sigint_handler_parent(int sig)// add comment here
 {
-  (void)sig; // Avoid warning
-  
   if (foreground_pid != -1)
   {
     kill(foreground_pid, SIGINT);
-    foreground_pid = -1; // undefined behaviour?
+    foreground_pid = -1; 
   }
 }
 
-static void sigint_handler_foreground(int sig)
+static void sigint_handler_foreground(int sig) // add comment here
 {
-  (void)sig; // Avoid warning
   exit(0);
 }
 
@@ -120,7 +117,6 @@ static void sigint_handler_foreground(int sig)
 static int handle_cmd(Command *cmd_get)
 
 {
-  // int sleep_time = 0;
   int chld_pid;
   int pipe_counts = 0;
 
@@ -130,12 +126,13 @@ static int handle_cmd(Command *cmd_get)
   char *cmd_part = pgmlist[0];
   char *arg_first = pgmlist[1]; // get path for cd
 
-  if (!strcmp(cmd_part, "exit"))
+  //handle exit
+  if (!strcmp(cmd_part, "exit")) 
   {
     exit(0);
   }
 
-  // handle cd
+  // handle cd cmd
   if (!strcmp(cmd_part, "cd"))
   {
 
@@ -146,37 +143,26 @@ static int handle_cmd(Command *cmd_get)
     return 0;
   }
 
-  if (cmd_get->background == 1)
+  while (pgm_now->next != NULL)// calculate the numbers of pipes
   { 
-    // if in background !!!!!
-
-  }
-  else
-  {
-    
-  }
-
-  while (pgm_now->next != NULL)
-  { //!!!!!!
     pipe_counts++;
     pgm_now = pgm_now->next;
   }
 
   int file_des[pipe_counts][2];
-  // int pid = fork();
-  if (pipe_counts == 0)
+
+  if (pipe_counts == 0)// no pipes
   {   
     // Fork a new process
     int pid = fork();
 
-    if (pid < 0)
+    if (pid < 0)// Fork failed
     {
-      // Fork failed
       perror("fork failed");
       exit(1);
     }
 
-    if (pid == 0)
+    if (pid == 0)//child
     {
           if (cmd_get->background != 1)
     {
@@ -187,7 +173,7 @@ static int handle_cmd(Command *cmd_get)
       run_cmd(pgm_now);
     }
     else
-    {
+    { //parent should wait child finished but not bg
 
     if (cmd_get->background) {
     foreground_pid = foreground_pid;
@@ -196,20 +182,16 @@ static int handle_cmd(Command *cmd_get)
 }
     int status;
     waitpid(pid, &status, 0);
-
-
-
     }
-    // print_cmd(cmd_get);
      return 0;
   }
-  else
+  else// with pipes
   { 
     Pgm *pgm_now_dup = cmd_get->pgm;
     int pipe_index = 0;
     int fd_pipe_creat[pipe_counts][2];
-    file_des[0][0] = STDIN_FILENO;            // First command reads from standard input
-    file_des[pipe_counts][1] = STDOUT_FILENO; // Last command writes to standard output
+    file_des[0][0] = STDIN_FILENO;            // first command reads from standard input
+    file_des[pipe_counts][1] = STDOUT_FILENO; // last command writes to standard output
 
     // Create pipes and assign fd
     for (int i = 0; i < pipe_counts; i++)
@@ -223,8 +205,9 @@ static int handle_cmd(Command *cmd_get)
       file_des[i + 1][0] = fd_pipe_creat[i][0]; // Read end for the next command
     }
 
+    // main process fork child for each commands
     for (pipe_index; pipe_index <= pipe_counts; pipe_index++)
-    { // Let main process fork a child for each command
+    { 
 
       int pid = fork();
       if (pid == -1)
@@ -233,7 +216,7 @@ static int handle_cmd(Command *cmd_get)
         exit(1);
       }
 
-      if (pid == 0)
+      if (pid == 0)//if child
       {
         signal(SIGINT, SIG_DFL); // enable ctrl_c
 
@@ -261,7 +244,7 @@ static int handle_cmd(Command *cmd_get)
           }
         }
 
-        for (int i = 0; i <= pipe_counts; i++)
+        for (int i = 0; i <= pipe_counts; i++)// close unnessary pipe
         {
           if (file_des[i][0] != STDIN_FILENO)
           {
@@ -281,7 +264,7 @@ static int handle_cmd(Command *cmd_get)
       }
     }
   }
-  // Close parents pipes
+  // close parents pipes
   if (pipe_counts > 0)
   {
     for (int i = 0; i < pipe_counts; i++)
@@ -291,7 +274,7 @@ static int handle_cmd(Command *cmd_get)
     }
   }
 
-  // Wait for all children if in foreground
+  // Wait for all child if in foreground
   if (!(cmd_get->background))
   { // If not in background
     for (int i = 0; i <= pipe_counts; i++)
