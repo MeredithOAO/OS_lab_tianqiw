@@ -50,7 +50,7 @@ int main(void)
 {
   Command cmd;
   char *line;
-  //signal(SIGINT, SIG_IGN);
+
   signal(SIGINT, sigint_handler_parent);
   signal(SIGCHLD, SIG_IGN);
   foreground_pid = getpid();
@@ -62,13 +62,6 @@ int main(void)
     if (line == NULL)
       {exit_handler();}
 
-
-    // if (!line)
-    // {
-    //     finish_flag = 1;
-    // }
-    // else
-    // {
       stripwhite(line);
 
       if (*line)
@@ -81,11 +74,8 @@ int main(void)
           int pid = fork();
           if (pid == 0)
           {
-            /*
-            handle the SIGINT(a signal number which is Ctrl-C)
-            SIG_IGN will ignore the signal of Ctrl-C
-            */
-            signal(SIGINT, SIG_IGN);
+
+            signal(SIGINT, SIG_IGN); //disable ctrl+c
             handle_cmd(&cmd);
             exit(0);
           }
@@ -95,7 +85,6 @@ int main(void)
 
         
       }
-    // }
 
     if (line)
     {
