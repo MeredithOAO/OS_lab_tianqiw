@@ -1,8 +1,8 @@
 ---
-author:
+Author:
 - "Group 10: Tianqi Wen, Aysha Siddika, Ateeq Ur Rehman"
-date: 1970-01-01
-title: Operating System Lab 1 Report
+Date: 2024-09-24
+Title: Operating System Lab 1 Report
 ---
 
 # Introduction
