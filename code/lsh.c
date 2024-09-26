@@ -59,7 +59,7 @@ int main(void)
   {
 
     line = readline("> ");
-    if (line == NULL)  // add comment here
+    if (line == NULL)  // send SIGQUIT to kill process
       {  
         signal(SIGQUIT, SIG_IGN);
         kill(0, SIGQUIT);
@@ -73,7 +73,7 @@ int main(void)
         add_history(line);
         parse(line, &cmd);
 
-        if (cmd.background)// add comment here
+        if (cmd.background)
         {
           int pid = fork();
           if (pid == 0)
@@ -99,7 +99,7 @@ int main(void)
   return 0;
 }
 
-static void sigint_handler_parent(int sig)// add comment here
+static void sigint_handler_parent(int sig)// kill foreground instead of shell
 {
   if (foreground_pid != -1)
   {
@@ -108,7 +108,7 @@ static void sigint_handler_parent(int sig)// add comment here
   }
 }
 
-static void sigint_handler_foreground(int sig) // add comment here
+static void sigint_handler_foreground(int sig) 
 {
   exit(0);
 }
@@ -168,7 +168,7 @@ static int handle_cmd(Command *cmd_get)
     {
       signal(SIGINT, sigint_handler_foreground);
     }
-    //   signal(SIGINT, SIG_DFL); // recovery signal
+    
       redirections(cmd_get);
       run_cmd(pgm_now);
     }
@@ -201,8 +201,8 @@ static int handle_cmd(Command *cmd_get)
         perror("Pipe failed");
         return -1;
       }
-      file_des[i][1] = fd_pipe_creat[i][1];     // Write end for the current command
-      file_des[i + 1][0] = fd_pipe_creat[i][0]; // Read end for the next command
+      file_des[i][1] = fd_pipe_creat[i][1];     // write end for the current command
+      file_des[i + 1][0] = fd_pipe_creat[i][0]; // read end for the next command
     }
 
     // main process fork child for each commands
@@ -276,7 +276,7 @@ static int handle_cmd(Command *cmd_get)
 
   // Wait for all child if in foreground
   if (!(cmd_get->background))
-  { // If not in background
+  {
     for (int i = 0; i <= pipe_counts; i++)
     {
       int status;
